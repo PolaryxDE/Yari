@@ -18,6 +18,7 @@ export default class IntegrateRoute extends BaseRoute {
                         .map(value => value.name);
                     res.json({
                         name: packageData.name,
+                        version: packageData.version,
                         files
                     });
                 } else {

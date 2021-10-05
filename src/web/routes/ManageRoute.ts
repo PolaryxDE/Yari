@@ -16,7 +16,7 @@ export default class ManageRoute extends BaseRoute {
                     throw new Error("Bad Request!");
                 }
                 await Package.create({
-                    name: req.body.name
+                    name: req.body.name, version: 1
                 });
                 res.json({success: true});
             } catch (e) {

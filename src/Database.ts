@@ -37,6 +37,9 @@ export default class Database {
                 autoIncrement: true,
                 primaryKey: true
             },
+            version: {
+                type: DataTypes.INTEGER.UNSIGNED
+            },
             name: {
                 type: new DataTypes.STRING(),
                 allowNull: false
