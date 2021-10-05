@@ -56,6 +56,29 @@
             cb(result.isConfirmed);
         });
     }
+    function getInputWithCheck(msg, checker, cb) {
+        Swal.fire({
+            title: "Input required!",
+            inputLabel: "Enter " + msg + ":",
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Submit',
+            cancelButtonText: 'Cancel',
+            input: 'text'
+        }).then(result => {
+            if (result.value) {
+                if (checker(result.value)) {
+                    cb(result.value);
+                } else {
+                    notifyError("Invalid Input!");
+                }
+            }
+        });
+    }
+    function getInput(msg, cb) {
+        getInputWithCheck(msg, () => true, cb);
+    }
     function notifyInputConfirm(msg, neededText, cb) {
         Swal.fire({
             title: msg,

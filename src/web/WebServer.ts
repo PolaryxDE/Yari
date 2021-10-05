@@ -11,6 +11,9 @@ import FileUtils from "../utils/FileUtils";
 import fs from "fs";
 import IPageHandler from "./pages/IPageHandler";
 import MainHandler from "./pages/MainHandler";
+import HubHandler from "./pages/HubHandler";
+import ManageRoute from "./routes/ManageRoute";
+import IntegrateRoute from "./routes/IntegrateRoute";
 
 const PUBLIC: string = __dirname + "/../../public";
 
@@ -27,6 +30,7 @@ export default class WebServer {
         this.mainHandler = new MainHandler();
         this.app = express();
         this.port = NumberUtils.parseNumber(process.env.PORT, -1);
+        this.registerHandler("/hub", new HubHandler());
     }
 
     /**
@@ -82,6 +86,8 @@ export default class WebServer {
                 res.redirect("/");
             }
         });
+        new ManageRoute().register(app);
+        new IntegrateRoute().register(app);
         app.use(async (req: express.Request, res: express.Response) => {
             try {
                 if (WebServer.handleResources("resources", req, res)) return;
@@ -112,7 +118,6 @@ export default class WebServer {
                     throw new Error();
                 }
             } catch (e) {
-                this.logger.error("An error occurred while rendering!", e);
                 res.status(200);
                 res.render(PUBLIC + "/404.ejs", {__public: PUBLIC, ...await this.mainHandler.processRequest(req, res)});
             }

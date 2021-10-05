@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <%- include(__public + '/head.ejs'); %>
+    <script src="global/codemirror.js"></script>
+    <link rel="stylesheet" href="global/codemirror.css"/>
+    <link rel="stylesheet" href="global/darcula.css"/>
+    <script src="global/yaml/yaml.js"></script>
+    <style>
+        .list {
+            width: 300px;
+            position: absolute;
+            top: 100px;
+            min-height: calc(100vh - 202px);
+            border: 1px solid white;
+            justify-content: space-between;
+            flex-direction: column;
+            display: flex;
+        }
+
+        .list-item {
+            width: calc(100% - 2px);
+            height: 38px;
+            color: white;
+            vertical-align: center;
+            line-height: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .list-item:hover {
+            text-decoration: none;
+            color: white;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .list-item.active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .CodeMirror {
+            position: absolute;
+            left: 450px;
+            top: 100px;
+            width: calc(100% - 300px * 2 - 100px - 200px);
+            min-height: calc(100vh - 200px);
+            border: 1px solid white;
+        }
+    </style>
+</head>
+<body>
+<div class="list" style="left: 50px">
+    <% packages.forEach(function(pack) { %>
+        <div class="list-item <%= isPackageSelected && selectedPackageId.toString() === pack.id.toString() ? "active" : "" %>">
+            <a href="?pacid=<%- pack.id %>"
+               style="color: white; height: 100%; width: calc(100% - 58px); display: inline-block; padding-left: 20px; text-decoration: none;">
+                <%= pack.name %>
+            </a>
+            <% if (isPackageSelected && selectedPackageId.toString() === pack.id.toString()) { %>
+                <button onclick="onDeletaPackage(<%- pack.id %>)" class="uk-button uk-button-danger"
+                        style="float: right; height: 38px; width: 38px !important; padding: 0">
+                    &times;
+                </button>
+            <% } %>
+        </div>
+    <% }); %>
+    <button class="uk-button uk-button-primary" style="width: 100%; margin-top: auto" onclick="onAddPackage()">
+        Add Package
+    </button>
+    <a class="uk-button uk-button-danger" style="width: 100%" href="/logout">
+        Logout
+    </a>
+</div>
+<% if (isPackageSelected) { %>
+<div class="list" style="right: 50px">
+    <% files.forEach(function(file) { %>
+        <div class="list-item <%= isFileSelected && selectedFileId.toString() === file.id.toString() ? "active" : "" %>">
+            <a href="?pacid=<%- selectedPackageId %>&fiid=<%- file.id %>"
+               style="color: white; height: 100%; width: calc(100% - 58px); display: inline-block; padding-left: 20px; text-decoration: none;">
+                <%= file.name %>
+            </a>
+            <% if (isFileSelected && selectedFileId.toString() === file.id.toString()) { %>
+                <button onclick="onDeletaPackageFile('<%- selectedPackageId %>', '<%- file.id %>')"
+                        class="uk-button uk-button-danger"
+                        style="float: right; height: 38px; width: 38px !important; padding: 0">
+                    &times;
+                </button>
+            <% } %>
+        </div>
+    <% }); %>
+    <button class="uk-button uk-button-primary" style="width: 100%; margin-top: auto"
+            onclick="onAddPackageFile(<%- selectedPackageId %>)">
+        Create new File
+    </button>
+    <% } %>
+</div>
+
+<% if (isFileSelected) { %>
+    <textarea name="code" id="code"><%= fileContent %></textarea>
+    <script>
+        let fileId = "<%- selectedFileId %>";
+        let shouldSave = false;
+        const editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+            mode: "yaml",
+            lineNumbers: true,
+            theme: "darcula",
+            extraKeys: {
+                "Tab": function(cm){
+                    cm.replaceSelection("    " , "end");
+                }
+            }
+        });
+        editor.on("change", () => {
+            shouldSave = true;
+        });
+
+        document.addEventListener("keydown", function (e) {
+            if (e.key.toUpperCase() === "S" && e.ctrlKey) {
+                e.preventDefault();
+                (async () => {
+                    try {
+                        if ((await api.post("/package/file/update", {
+                            id: fileId,
+                            content: editor.getValue()
+                        })).data.success === true) {
+                            shouldSave = false;
+                        }
+                    } catch (e) {
+                        notifyError("An Error occurred!");
+                    }
+                })();
+            }
+        }, false);
+
+        window.addEventListener('beforeunload', function (e) {
+            if (shouldSave) {
+                if (!confirm("You have unsaved changes! Are you sure you want to leave?")) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                }
+            }
+        });
+    </script>
+<% } %>
+<script>
+    function onDeletaPackageFile(packageId, fileId) {
+        notifyConfirm("Do you really want to delete this Package?", (success) => {
+            if (success) {
+                (async () => {
+                    try {
+                        if ((await api.delete("/package/file?packageId=" + packageId + "&id=" + fileId)).data.success === true) {
+                            window.location.href = "/hub?pacid=" + packageId;
+                        }
+                    } catch (e) {
+                        notifyError("An Error occurred!");
+                    }
+                })();
+            }
+        })
+    }
+
+    function onAddPackageFile(packageId) {
+        getInputWithCheck("Name (0-9, A-Z, Spaces, _)", name => {
+            return name.match(/^[0-9a-zA-Z_ ]+$/) != null;
+        }, async rawName => {
+            let name = rawName.split(" ").join("-");
+            try {
+                if ((await api.post("/package/file", {name: name, packageId: packageId})).data.success === true) {
+                    window.location.reload();
+                }
+            } catch (e) {
+                notifyError("An Error occurred!");
+            }
+        });
+    }
+
+    function onDeletaPackage(packageId) {
+        notifyConfirm("Do you really want to delete this Package?", (success) => {
+            if (success) {
+                (async () => {
+                    try {
+                        if ((await api.delete("/package?id=" + packageId)).data.success === true) {
+                            window.location.href = "/hub";
+                        }
+                    } catch (e) {
+                        notifyError("An Error occurred!");
+                    }
+                })();
+            }
+        })
+    }
+
+    function onAddPackage() {
+        getInputWithCheck("Name (0-9, A-Z, Spaces, _)", name => {
+            return name.match(/^[0-9a-zA-Z_ ]+$/) != null;
+        }, async rawName => {
+            let name = rawName.split(" ").join("-");
+            try {
+                if ((await api.post("/package", {name: name})).data.success === true) {
+                    window.location.reload();
+                }
+            } catch (e) {
+                notifyError("An Error occurred!");
+            }
+        });
+    }
+</script>
+</body>
+</html>

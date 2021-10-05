@@ -1,5 +1,6 @@
 import {DataTypes, Sequelize} from "sequelize";
 import Package from "./model/Package";
+import PackageFile from "./model/PackageFile";
 
 export default class Database {
 
@@ -36,20 +37,33 @@ export default class Database {
                 autoIncrement: true,
                 primaryKey: true
             },
-            version: {
-                type: DataTypes.INTEGER.UNSIGNED,
-                defaultValue: 0
-            },
             name: {
-                type: new DataTypes.STRING(256),
+                type: new DataTypes.STRING(),
                 allowNull: false
-            },
-            overwriteOnPublish: {
-                type: DataTypes.BOOLEAN,
-                defaultValue: true
             }
         }, {
             tableName: "packages",
+            sequelize: this.sequelize
+        });
+        PackageFile.init({
+            id: {
+                type: DataTypes.UUID,
+                defaultValue: DataTypes.UUIDV4,
+                primaryKey: true
+            },
+            packageId: {
+                type: DataTypes.INTEGER.UNSIGNED
+            },
+            name: {
+                type: new DataTypes.STRING(),
+                allowNull: false
+            },
+            content: {
+                type: new DataTypes.TEXT('long'),
+                allowNull: false
+            }
+        }, {
+            tableName: "package_files",
             sequelize: this.sequelize
         });
     }
